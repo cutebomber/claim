@@ -5,8 +5,7 @@ from telethon import TelegramClient, errors
 from telethon.tl.functions.channels import CreateChannelRequest
 from telethon.tl.functions.channels import UpdateUsernameRequest as ChannelUpdateUsername
 from telethon.tl.functions.account import CheckUsernameRequest
-from telethon.tl.types import Channel, Chat
-from datetime import datetime
+from telethon.tl.types import Channel
 import random
 
 # Color codes for terminal
@@ -26,21 +25,6 @@ class Colors:
     PINK = '\033[38;5;213m'
     GRAY = '\033[90m'
     WHITE = '\033[97m'
-    
-    # Background colors
-    BG_BLACK = '\033[40m'
-    BG_RED = '\033[41m'
-    BG_GREEN = '\033[42m'
-    BG_YELLOW = '\033[43m'
-    BG_BLUE = '\033[44m'
-    BG_MAGENTA = '\033[45m'
-    BG_CYAN = '\033[46m'
-    BG_WHITE = '\033[47m'
-    
-    # Styles
-    BLINK = '\033[5m'
-    REVERSE = '\033[7m'
-    HIDDEN = '\033[8m'
 
 # Your API credentials
 API_ID = 21752358
@@ -50,10 +34,16 @@ SESSION_NAME = 'my_account'
 def print_banner():
     """Print a cool banner"""
     banner = f"""
-{Colors.CYAN}{Colors.BOLD}╔══════════════════════════════════════════════════════════╗
-║{Colors.YELLOW}  🚀 TELEGRAM USERNAME CLAIMER v2.0 {Colors.CYAN}                        ║
-║{Colors.GREEN}  🔥 Created with ❤️  by @hankie{Colors.CYAN}                               ║
-╚══════════════════════════════════════════════════════════╝{Colors.END}
+{Colors.CYAN}{Colors.BOLD}╔════════════════════════════════════════════════════════════════╗
+║{Colors.YELLOW}  ████████╗███████╗██╗     ███████╗ ██████╗ ██████╗  █████╗ ███╗   ███╗{Colors.CYAN} ║
+║{Colors.YELLOW}  ╚══██╔══╝██╔════╝██║     ██╔════╝██╔════╝ ██╔══██╗██╔══██╗████╗ ████║{Colors.CYAN} ║
+║{Colors.YELLOW}     ██║   █████╗  ██║     █████╗  ██║  ███╗██████╔╝███████║██╔████╔██║{Colors.CYAN} ║
+║{Colors.YELLOW}     ██║   ██╔══╝  ██║     ██╔══╝  ██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║{Colors.CYAN} ║
+║{Colors.YELLOW}     ██║   ███████╗███████╗███████╗╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║{Colors.CYAN} ║
+║{Colors.YELLOW}     ╚═╝   ╚══════╝╚══════╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝{Colors.CYAN} ║
+║{Colors.GREEN}                  USERNAME MANAGER v3.0{Colors.CYAN}                              ║
+║{Colors.PINK}              Created with ❤️  by @hankie{Colors.CYAN}                              ║
+╚════════════════════════════════════════════════════════════════╝{Colors.END}
 """
     print(banner)
 
@@ -76,20 +66,6 @@ def print_warning(message):
 def print_info(message):
     """Print info message"""
     print(f"{Colors.BLUE}ℹ️  {Colors.BOLD}{message}{Colors.END}")
-
-def print_progress(current, total, message):
-    """Print progress with fancy formatting"""
-    percentage = (current / total) * 100
-    bar_length = 30
-    filled_length = int(bar_length * current // total)
-    bar = f"{Colors.GREEN}{'█' * filled_length}{Colors.GRAY}{'░' * (bar_length - filled_length)}{Colors.END}"
-    print(f"\r{Colors.MAGENTA}[{current}/{total}] {bar} {percentage:.1f}% {Colors.CYAN}{message}{Colors.END}", end="")
-    if current == total:
-        print()
-
-def print_table_row(col1, col2, col3, col4):
-    """Print a formatted table row"""
-    print(f"{Colors.GRAY}│{Colors.END} {col1:<20} {Colors.GRAY}│{Colors.END} {col2:<15} {Colors.GRAY}│{Colors.END} {col3:<10} {Colors.GRAY}│{Colors.END} {col4:<15} {Colors.GRAY}│{Colors.END}")
 
 async def logout_session():
     """Logout and delete session file"""
@@ -128,7 +104,7 @@ async def list_public_usernames():
     public_items = []
     total_dialogs = 0
     
-    # Get all dialogs with progress indicator
+    # Get all dialogs
     async for dialog in client.iter_dialogs():
         total_dialogs += 1
         entity = dialog.entity
@@ -206,46 +182,8 @@ async def list_public_usernames():
     
     await client.disconnect()
 
-def animate_text(text):
-    """Animate text with cool colors"""
-    colors = [Colors.RED, Colors.GREEN, Colors.YELLOW, Colors.BLUE, Colors.MAGENTA, Colors.CYAN]
-    for i, char in enumerate(text):
-        color = colors[i % len(colors)]
-        print(f"{color}{char}{Colors.END}", end="", flush=True)
-        asyncio.sleep(0.01)
-    print()
-
-async def main():
-    # Clear screen (optional - comment out if you don't want this)
-    os.system('cls' if os.name == 'nt' else 'clear')
-    
-    # Print banner
-    print_banner()
-    
-    # Check for command line arguments
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--logout":
-            await logout_session()
-            return
-        elif sys.argv[1] == "--list":
-            await list_public_usernames()
-            return
-        elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
-            print(f"{Colors.CYAN}╔════════════════════════════════════════════════════════════╗{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}  {Colors.BOLD}{Colors.YELLOW}🚀 TELEGRAM USERNAME CLAIMER - HELP{Colors.CYAN}                     ║{Colors.END}")
-            print(f"{Colors.CYAN}╠════════════════════════════════════════════════════════════╣{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}  {Colors.GREEN}Usage:{Colors.END} python claim_usernames.py [OPTION]                   {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}                                                      {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}  {Colors.YELLOW}Options:{Colors.END}                                                 {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--list{Colors.END}     List all public usernames in account         {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--logout{Colors.END}   Logout and delete session                     {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--help{Colors.END}     Show this help message                        {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}                                                      {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}║{Colors.END}  {Colors.GREEN}Without options:{Colors.END} Run username claiming process               {Colors.CYAN}║{Colors.END}")
-            print(f"{Colors.CYAN}╚════════════════════════════════════════════════════════════╝{Colors.END}")
-            return
-    
-    # Original username claiming code
+async def claim_usernames():
+    """Main function to claim usernames"""
     print_step("Initializing Telegram client...", "⚡")
     client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
     await client.start()
@@ -258,14 +196,12 @@ async def main():
     print(f"{Colors.CYAN}{'='*50}{Colors.END}")
     
     usernames = []
-    line_count = 0
     while True:
         line = (await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)).strip()
         if not line:
             break
         cleaned = line.lstrip('@')
         usernames.append(cleaned)
-        line_count += 1
         print(f"{Colors.GREEN}  ✓ Added: @{cleaned}{Colors.END}")
 
     if not usernames:
@@ -282,28 +218,28 @@ async def main():
     skipped = 0
 
     for idx, username in enumerate(usernames, 1):
-        # Progress bar
-        print_progress(idx, len(usernames), f"Checking @{username}")
+        # Progress indicator
+        print(f"{Colors.MAGENTA}[{idx}/{len(usernames)}]{Colors.END} Checking @{username}... ", end="", flush=True)
         
         # 1. Check availability
         try:
             result = await client(CheckUsernameRequest(username))
             available = result
         except errors.UsernameInvalidError:
-            print(f"\r{Colors.RED}❌ @{username} - Invalid format{Colors.END}          ")
+            print(f"{Colors.RED}❌ Invalid format{Colors.END}")
             skipped += 1
             continue
         except errors.RPCError as e:
-            print(f"\r{Colors.RED}❌ @{username} - Error: {e}{Colors.END}")
+            print(f"{Colors.RED}❌ Error: {e}{Colors.END}")
             failed += 1
             continue
 
         if not available:
-            print(f"\r{Colors.YELLOW}⚠️  @{username} - Already taken{Colors.END}          ")
+            print(f"{Colors.YELLOW}⚠️ Already taken{Colors.END}")
             skipped += 1
             continue
 
-        print(f"\r{Colors.GREEN}✅ @{username} - Available! Creating channel...{Colors.END}")
+        print(f"{Colors.GREEN}✅ Available! Creating channel...{Colors.END}")
 
         # 2. Create channel
         try:
@@ -319,39 +255,39 @@ async def main():
                 channel = result[0].chats[0] if isinstance(result, list) else None
             
             if not channel:
-                print(f"\r{Colors.RED}❌ @{username} - Failed to get channel object{Colors.END}")
+                print(f"   {Colors.RED}❌ Failed to get channel object{Colors.END}")
                 failed += 1
                 continue
                 
             # 3. Set username
             try:
                 await client(ChannelUpdateUsername(channel=channel, username=username))
-                print(f"\r{Colors.GREEN}{Colors.BOLD}✅ @{username} - SUCCESSFULLY CLAIMED! 🎉{Colors.END}")
+                print(f"   {Colors.GREEN}{Colors.BOLD}✅ SUCCESSFULLY CLAIMED @{username}! 🎉{Colors.END}")
                 successful += 1
                 
                 # Show channel info
-                print(f"{Colors.GRAY}   ├─ Channel ID: {channel.id}{Colors.END}")
-                print(f"{Colors.GRAY}   ├─ Title: @{Colors.END}")
-                print(f"{Colors.GRAY}   └─ Bio: owner : @hankie{Colors.END}\n")
+                print(f"   {Colors.GRAY}├─ Channel ID: {channel.id}{Colors.END}")
+                print(f"   {Colors.GRAY}├─ Title: @{Colors.END}")
+                print(f"   {Colors.GRAY}└─ Bio: owner : @hankie{Colors.END}\n")
                 
             except errors.UsernameOccupiedError:
-                print(f"\r{Colors.RED}❌ @{username} - Taken right before setting{Colors.END}")
+                print(f"   {Colors.RED}❌ Taken right before setting{Colors.END}")
                 failed += 1
             except errors.UsernameInvalidError:
-                print(f"\r{Colors.RED}❌ @{username} - Invalid username{Colors.END}")
+                print(f"   {Colors.RED}❌ Invalid username{Colors.END}")
                 failed += 1
             except Exception as e:
-                print(f"\r{Colors.RED}❌ @{username} - Failed: {e}{Colors.END}")
+                print(f"   {Colors.RED}❌ Failed: {e}{Colors.END}")
                 failed += 1
 
         except errors.RPCError as e:
-            print(f"\r{Colors.RED}❌ @{username} - Channel creation failed: {e}{Colors.END}")
+            print(f"   {Colors.RED}❌ Channel creation failed: {e}{Colors.END}")
             failed += 1
         except Exception as e:
-            print(f"\r{Colors.RED}❌ @{username} - Unexpected error: {e}{Colors.END}")
+            print(f"   {Colors.RED}❌ Unexpected error: {e}{Colors.END}")
             failed += 1
 
-        # Delay
+        # Delay to avoid rate limits
         if idx < len(usernames):
             await asyncio.sleep(2)
 
@@ -375,5 +311,56 @@ async def main():
     
     await client.disconnect()
 
+def show_help():
+    """Show help menu"""
+    print(f"{Colors.CYAN}╔══════════════════════════════════════════════════════════════════╗{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}  {Colors.BOLD}{Colors.YELLOW}🚀 TELEGRAM USERNAME MANAGER - HELP{Colors.CYAN}                         ║{Colors.END}")
+    print(f"{Colors.CYAN}╠══════════════════════════════════════════════════════════════════╣{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}  {Colors.GREEN}Usage:{Colors.END} python telegram_username_manager.py [OPTION]              {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}                                                                  {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}  {Colors.YELLOW}Options:{Colors.END}                                                         {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--list{Colors.END}     List all public usernames in your account             {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--logout{Colors.END}   Logout and delete session file                        {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--claim{Colors.END}    Run username claiming process (default)                {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    {Colors.CYAN}--help{Colors.END}     Show this help message                                {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}                                                                  {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}  {Colors.GREEN}Examples:{Colors.END}                                                       {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    python telegram_username_manager.py --list                     {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    python telegram_username_manager.py --logout                   {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    python telegram_username_manager.py                            {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}║{Colors.END}    (no args starts claim mode)                                    {Colors.CYAN}║{Colors.END}")
+    print(f"{Colors.CYAN}╚══════════════════════════════════════════════════════════════════╝{Colors.END}")
+
+async def main():
+    # Clear screen
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    # Print banner
+    print_banner()
+    
+    # Check for command line arguments
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        
+        if arg == "--logout" or arg == "-l":
+            await logout_session()
+        elif arg == "--list" or arg == "-ls":
+            await list_public_usernames()
+        elif arg == "--help" or arg == "-h":
+            show_help()
+        elif arg == "--claim" or arg == "-c":
+            await claim_usernames()
+        else:
+            print_error(f"Unknown option: {sys.argv[1]}")
+            show_help()
+    else:
+        # No arguments - run claim mode
+        await claim_usernames()
+
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}⚠️  Script interrupted by user{Colors.END}")
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
