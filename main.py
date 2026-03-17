@@ -1,11 +1,18 @@
+"""
+Telegram Public Channel Creator
+Uses Telethon to log in and create a public channel with a given username.
+
+Requirements:
+    pip install telethon
+
+Usage:
+    python create_telegram_channel.py
+"""
+
 import asyncio
-import sys
 from telethon import TelegramClient
-from telethon.tl.functions.channels import (
-    CreateChannelRequest,
-    UpdateUsernameRequest,
-    DeleteChannelRequest,
-)
+from telethon.tl.functions.channels import CreateChannelRequest, UpdateUsernameRequest
+from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.errors import (
     UsernameOccupiedError,
     UsernameInvalidError,
@@ -13,135 +20,61 @@ from telethon.errors import (
     SessionPasswordNeededError,
 )
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
-API_ID   = 21752358     # Get from https://my.telegram.org/apps
-API_HASH = "fb46a136fed4a4de27ab057c7027fec3"    # Get from https://my.telegram.org/apps
+# ── Credentials ───────────────────────────────────────────────────────────────
+API_ID   = 21752358
+API_HASH = "fb46a136fed4a4de27ab057c7027fec3"
+SESSION  = "my_telegram_session"   # session file saved locally (.session)
 
-CHANNEL_DISPLAY_NAME = "@"
-CHANNEL_BIO          = "owner : @hankie"
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-async def login(client):
-    """Handles phone, OTP and optional 2FA login interactively."""
-
-    await client.connect()
-
-    if await client.is_user_authorized():
-        me = await client.get_me()
-        print(f"✅ Already logged in as {me.first_name} (@{me.username})\n")
-        return True
-
-    # ── Step 1: Phone number ────────────────────────────────────────────────
-    phone = input("📱 Enter your phone number (with country code, e.g. +1234567890): ").strip()
-
-    await client.send_code_request(phone)
-    print("📨 OTP sent to your Telegram app.\n")
-
-    # ── Step 2: OTP ─────────────────────────────────────────────────────────
-    while True:
-        otp = input("🔑 Enter the OTP you received: ").strip().replace(" ", "")
-        try:
-            await client.sign_in(phone, otp)
-            break
-        except SessionPasswordNeededError:
-            # ── Step 3: 2FA password (if enabled) ───────────────────────────
-            print("\n🔒 2FA is enabled on this account.")
-            while True:
-                password = input("🔐 Enter your 2FA password: ").strip()
-                try:
-                    await client.sign_in(password=password)
-                    break
-                except Exception as e:
-                    print(f"    ❌ Wrong 2FA password: {e}. Try again.")
-            break
-        except Exception as e:
-            print(f"    ❌ Invalid OTP: {e}. Try again.")
-
-    me = await client.get_me()
-    print(f"\n✅ Logged in successfully as {me.first_name} (@{me.username})\n")
-    return True
-
-
-async def claim_username(client, username):
-    print(f"\n[*] Trying to claim @{username} ...")
-    channel = None
-
-    try:
-        result = await client(CreateChannelRequest(
-            title=CHANNEL_DISPLAY_NAME,
-            about=CHANNEL_BIO,
-            megagroup=False
-        ))
-        channel = result.chats[0]
-        print(f"    ✅ Channel created (ID: {channel.id})")
-
-        await client(UpdateUsernameRequest(channel, username))
-        print(f"    🎉 @{username} claimed successfully!")
-        return True
-
-    except UsernameOccupiedError:
-        print(f"    ❌ @{username} is already taken.")
-    except UsernameInvalidError:
-        print(f"    ❌ @{username} is invalid.")
-    except FloodWaitError as e:
-        print(f"    ⚠️  Flood wait! Sleeping {e.seconds}s ...")
-        await asyncio.sleep(e.seconds + 5)
-    except Exception as e:
-        print(f"    ❌ Unexpected error: {e}")
-
-    # Clean up failed/empty channel
-    if channel:
-        try:
-            await client(DeleteChannelRequest(channel))
-            print(f"    🗑️  Cleaned up empty channel.")
-        except Exception:
-            pass
-
-    return False
+# ── Channel settings ──────────────────────────────────────────────────────────
+CHANNEL_USERNAME = input("Enter the username to claim (without @): ").strip()
+CHANNEL_TITLE    = f"@{CHANNEL_USERNAME}"   # channel display name
+CHANNEL_BIO      = "owner : @hankie"
 
 
 async def main():
-    # Use a generic session name; reused on next run if already logged in
-    client = TelegramClient("session_claimer", API_ID, API_HASH)
+    client = TelegramClient(SESSION, API_ID, API_HASH)
+    await client.start()
 
-    # ── Login ────────────────────────────────────────────────────────────────
-    await login(client)
+    # Handle 2FA if enabled
+    if not await client.is_user_authorized():
+        print("Not authorized. Please check your session.")
+        return
 
-    # ── Get usernames ────────────────────────────────────────────────────────
-    print("📋 Enter usernames to claim (one per line).")
-    print("   When done, type 'done' and press Enter.\n")
+    me = await client.get_me()
+    print(f"✅ Logged in as: {me.first_name} (@{me.username})")
 
-    usernames = []
-    while True:
-        entry = input(f"   Username {len(usernames) + 1}: ").strip().lstrip("@")
-        if entry.lower() == "done":
-            if not usernames:
-                print("   ⚠️  No usernames entered. Please add at least one.")
-                continue
-            break
-        if entry:
-            usernames.append(entry)
-            print(f"   ✅ Added @{entry}")
+    # ── Create the channel ────────────────────────────────────────────────────
+    print(f"\n⏳ Creating channel '{CHANNEL_TITLE}' ...")
+    try:
+        result = await client(CreateChannelRequest(
+            title=CHANNEL_TITLE,
+            about=CHANNEL_BIO,
+            megagroup=False,   # False = broadcast channel, True = supergroup
+        ))
+        channel = result.chats[0]
+        print(f"✅ Channel created  →  id: {channel.id}")
+    except FloodWaitError as e:
+        print(f"⚠️  Flood wait: please retry after {e.seconds} seconds.")
+        return
+    except Exception as e:
+        print(f"❌ Failed to create channel: {e}")
+        return
 
-    print(f"\n🚀 Starting to claim {len(usernames)} username(s)...\n")
+    # ── Set public username ───────────────────────────────────────────────────
+    print(f"⏳ Setting username @{CHANNEL_USERNAME} ...")
+    try:
+        await client(UpdateUsernameRequest(channel, CHANNEL_USERNAME))
+        print(f"✅ Username set  →  t.me/{CHANNEL_USERNAME}")
+    except UsernameOccupiedError:
+        print("❌ Username is already taken. Try a different one.")
+    except UsernameInvalidError:
+        print("❌ Username is invalid. Use only letters, numbers, and underscores (5–32 chars).")
+    except FloodWaitError as e:
+        print(f"⚠️  Flood wait: please retry after {e.seconds} seconds.")
+    except Exception as e:
+        print(f"❌ Failed to set username: {e}")
 
-    # ── Claim ────────────────────────────────────────────────────────────────
-    claimed, failed = [], []
-
-    for username in usernames:
-        success = await claim_username(client, username)
-        (claimed if success else failed).append(username)
-        await asyncio.sleep(3)
-
-    # ── Results ──────────────────────────────────────────────────────────────
-    print("\n" + "═" * 40)
-    print("📋 FINAL RESULTS")
-    print("═" * 40)
-    print(f"  🎉 Claimed ({len(claimed)}): {', '.join(claimed) or 'None'}")
-    print(f"  ❌ Failed  ({len(failed)}):  {', '.join(failed)  or 'None'}")
-    print("═" * 40)
-
+    print("\n🎉 Done!")
     await client.disconnect()
 
 
