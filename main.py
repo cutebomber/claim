@@ -2,7 +2,8 @@ import asyncio
 import sys
 from telethon import TelegramClient, errors
 from telethon.tl.functions.channels import CreateChannelRequest
-from telethon.tl.functions.account import UpdateUsernameRequest, CheckUsernameRequest
+from telethon.tl.functions.channels import UpdateUsernameRequest as ChannelUpdateUsername
+from telethon.tl.functions.account import CheckUsernameRequest
 
 # Your API credentials
 API_ID = 21752358
@@ -38,7 +39,9 @@ async def main():
 
         # 1. Check availability
         try:
-            available = await client(CheckUsernameRequest(username))
+            result = await client(CheckUsernameRequest(username))
+            # The result is a boolean (True = available, False = taken)
+            available = result
         except errors.UsernameInvalidError:
             print(f"   ❌ Username @{username} is invalid (bad format).")
             continue
@@ -59,12 +62,25 @@ async def main():
                 about="owner : @hankie",
                 megagroup=False  # normal channel
             ))
-            channel = result.chats[0]  # the new channel
+            
+            # Extract the channel from the result
+            # The result is a tuple-like object with .chats attribute
+            if hasattr(result, 'chats') and result.chats:
+                channel = result.chats[0]
+            else:
+                # Alternative way to get the channel
+                channel = result[0].chats[0] if isinstance(result, list) else None
+            
+            if not channel:
+                print(f"   ❌ Failed to get channel object.")
+                continue
+                
             print(f"   ✅ Channel created (ID: {channel.id}). Setting username...")
 
-            # 3. Set the username
+            # 3. Set the username - FIXED SYNTAX
             try:
-                await client(UpdateUsernameRequest(channel, username))
+                # Correct way to call UpdateUsernameRequest
+                await client(ChannelUpdateUsername(channel=channel, username=username))
                 print(f"   ✅ Successfully claimed @{username}!\n")
             except errors.UsernameOccupiedError:
                 # Rare race condition – someone else took it just now
