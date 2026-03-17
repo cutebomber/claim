@@ -1,82 +1,90 @@
-"""
-Telegram Public Channel Creator
-Uses Telethon to log in and create a public channel with a given username.
-
-Requirements:
-    pip install telethon
-
-Usage:
-    python create_telegram_channel.py
-"""
-
 import asyncio
-from telethon import TelegramClient
-from telethon.tl.functions.channels import CreateChannelRequest, UpdateUsernameRequest
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.errors import (
-    UsernameOccupiedError,
-    UsernameInvalidError,
-    FloodWaitError,
-    SessionPasswordNeededError,
-)
+import sys
+from telethon import TelegramClient, errors
+from telethon.tl.functions.channels import CreateChannelRequest
+from telethon.tl.functions.account import UpdateUsernameRequest, CheckUsernameRequest
 
-# ── Credentials ───────────────────────────────────────────────────────────────
-API_ID   = 21752358
-API_HASH = "fb46a136fed4a4de27ab057c7027fec3"
-SESSION  = "my_telegram_session"   # session file saved locally (.session)
+# Your API credentials
+API_ID = 21752358
+API_HASH = 'fb46a136fed4a4de27ab057c7027fec3'
 
-# ── Channel settings ──────────────────────────────────────────────────────────
-CHANNEL_USERNAME = input("Enter the username to claim (without @): ").strip()
-CHANNEL_TITLE    = f"@{CHANNEL_USERNAME}"   # channel display name
-CHANNEL_BIO      = "owner : @hankie"
-
+SESSION_NAME = 'my_account'
 
 async def main():
-    client = TelegramClient(SESSION, API_ID, API_HASH)
+    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
     await client.start()
+    print("✅ Logged in successfully!")
 
-    # Handle 2FA if enabled
-    if not await client.is_user_authorized():
-        print("Not authorized. Please check your session.")
+    # Read usernames from user input (one per line, empty line to finish)
+    print("Enter usernames to check and claim (one per line). Press Enter on an empty line to start processing:")
+    usernames = []
+    while True:
+        line = (await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)).strip()
+        if not line:
+            break
+        # Remove '@' if accidentally included
+        cleaned = line.lstrip('@')
+        usernames.append(cleaned)
+
+    if not usernames:
+        print("No usernames provided. Exiting.")
+        await client.disconnect()
         return
 
-    me = await client.get_me()
-    print(f"✅ Logged in as: {me.first_name} (@{me.username})")
+    print(f"\nProcessing {len(usernames)} username(s)...\n")
 
-    # ── Create the channel ────────────────────────────────────────────────────
-    print(f"\n⏳ Creating channel '{CHANNEL_TITLE}' ...")
-    try:
-        result = await client(CreateChannelRequest(
-            title=CHANNEL_TITLE,
-            about=CHANNEL_BIO,
-            megagroup=False,   # False = broadcast channel, True = supergroup
-        ))
-        channel = result.chats[0]
-        print(f"✅ Channel created  →  id: {channel.id}")
-    except FloodWaitError as e:
-        print(f"⚠️  Flood wait: please retry after {e.seconds} seconds.")
-        return
-    except Exception as e:
-        print(f"❌ Failed to create channel: {e}")
-        return
+    for idx, username in enumerate(usernames, 1):
+        print(f"[{idx}/{len(usernames)}] Checking @{username}...")
 
-    # ── Set public username ───────────────────────────────────────────────────
-    print(f"⏳ Setting username @{CHANNEL_USERNAME} ...")
-    try:
-        await client(UpdateUsernameRequest(channel, CHANNEL_USERNAME))
-        print(f"✅ Username set  →  t.me/{CHANNEL_USERNAME}")
-    except UsernameOccupiedError:
-        print("❌ Username is already taken. Try a different one.")
-    except UsernameInvalidError:
-        print("❌ Username is invalid. Use only letters, numbers, and underscores (5–32 chars).")
-    except FloodWaitError as e:
-        print(f"⚠️  Flood wait: please retry after {e.seconds} seconds.")
-    except Exception as e:
-        print(f"❌ Failed to set username: {e}")
+        # 1. Check availability
+        try:
+            available = await client(CheckUsernameRequest(username))
+        except errors.UsernameInvalidError:
+            print(f"   ❌ Username @{username} is invalid (bad format).")
+            continue
+        except errors.RPCError as e:
+            print(f"   ❌ Error checking @{username}: {e}")
+            continue
 
-    print("\n🎉 Done!")
+        if not available:
+            print(f"   ❌ Username @{username} is already taken.")
+            continue
+
+        print(f"   ✅ Username @{username} is available. Creating channel...")
+
+        # 2. Create channel with title "@" and bio "owner : @hankie"
+        try:
+            result = await client(CreateChannelRequest(
+                title="@",
+                about="owner : @hankie",
+                megagroup=False  # normal channel
+            ))
+            channel = result.chats[0]  # the new channel
+            print(f"   ✅ Channel created (ID: {channel.id}). Setting username...")
+
+            # 3. Set the username
+            try:
+                await client(UpdateUsernameRequest(channel, username))
+                print(f"   ✅ Successfully claimed @{username}!\n")
+            except errors.UsernameOccupiedError:
+                # Rare race condition – someone else took it just now
+                print(f"   ❌ Failed: @{username} was taken right before setting.")
+            except errors.UsernameInvalidError:
+                print(f"   ❌ Failed: @{username} is invalid.")
+            except Exception as e:
+                print(f"   ❌ Failed to set username: {e}")
+
+        except errors.RPCError as e:
+            print(f"   ❌ Failed to create channel: {e}")
+        except Exception as e:
+            print(f"   ❌ Unexpected error: {e}")
+
+        # Delay to avoid hitting rate limits
+        if idx < len(usernames):  # no need to wait after the last one
+            await asyncio.sleep(2)
+
+    print("\nAll done!")
     await client.disconnect()
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())
